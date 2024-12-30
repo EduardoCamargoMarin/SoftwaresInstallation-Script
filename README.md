@@ -17,3 +17,7 @@
 # Windows Defender Scan
 1. It has two options, the quick and full scan, both will act on the command's prompt screen, wait until it finishes.
 2. You can check the results on the Windows Defender tab on your computer.
+
+#Version
+1. 1.0.0 - Install basic programs and do a quick or full Windows Defender Scan
+2. 1.0.1 - It can now do Windows Update (Auto Reboot the computer)
