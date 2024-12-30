@@ -7,7 +7,8 @@ function Show-Menu {
     Write-Host "1. Instalar programas" -ForegroundColor Yellow
     Write-Host "2. Executar o Windows Defender (Verificação Completa)" -ForegroundColor Yellow
     Write-Host "3. Executar o Windows Defender (Verificação Rápida)" -ForegroundColor Yellow
-    Write-Host "4. Sair" -ForegroundColor Yellow
+    Write-Host "4. Atualização do Windows (Verificação Windows Update)" -ForegroundColor Yellow
+    Write-Host "5. Sair" -ForegroundColor Yellow
     Write-Host "---------------------------" -ForegroundColor Cyan
 }
 
@@ -75,10 +76,70 @@ function Run-QuickScan {
     }
 }
 
+
+# Admin check function
+function Verificar-Administrador {
+    $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    if (-not $admin) {
+        Write-Host "Este script requer permissões administrativas. Reiniciando com privilégios elevados..." -ForegroundColor Yellow
+
+        # Admin PS path
+        $scriptPath = $PSCommandPath
+
+        # Relaunch PS
+        Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`"" -Verb RunAs
+        exit
+    }
+}
+
+# Check if we are using Admin privilege
+Verificar-Administrador
+
+function Windows-Update {
+    try {
+        Write-Host "Verificando atualização do Windows..." -ForegroundColor Yellow
+
+        # Checking if PSWindowsUpdate is installed
+        if(!(Get-Module -ListAvailable -Name PSWindowsUpdate)) {
+            Write-Host "PSWindowsUpdate não encontrado. Instalando módulo..." -ForegroundColor Cyan
+            Install-Module -Name PSWindowsUpdate -Force -Scope CurrentUser
+        }
+
+        #import module
+        Import-Module PSWindowsUpdate
+
+
+        #Show available updates
+        $update = Get-WindowsUpdate
+        
+        if($update) {
+            Write-Host "As seguintes atualizações estão disponíveis:" -ForegroundColor Cyan
+            $update | Format-Table -AutoSize
+
+
+        # User's confirmation
+        $confirm = Read-Host "Deseja instalar todas as atualizações? O COMPUTADOR VAI REINICIALIZAR, SALVAR TODOS OS ARQUIVOS ANTES DE PROSSEGUIR!! (S/N):  "
+        if($confirm -eq "S") {
+            Write-Host "Instalando atualizações. Isso pode levar alguns minutos."
+             Install-WindowsUpdate -AcceptAll -ForceInstall -AutoReboot
+            Write-Host "Atualizações instaladas com sucesso!" -ForegroundColor Green
+        }
+        else {
+            Write-Host "Instalação não realizada" -ForegroundColor Red
+        }
+        else {
+         Write-Host "Nenhuma atualização disponível no momento." -ForegroundColor Green
+        }
+    }
+}
+catch {
+        Write-Host "Erro ao verificar ou instalar atualizações: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
 # Selection menu
 do {
     Show-Menu
-    $option = Read-Host "Escolha uma opção (1-4)"
+    $option = Read-Host "Escolha uma opção (1-5)"
 
     switch ($option) {
         "1" {
@@ -93,12 +154,18 @@ do {
             Run-QuickScan
             Read-Host "Pressione Enter para continuar..."  # User's Pause to check
         }
-        "4" {
+         "4" {
+            Windows-Update
+            Write-Host "Atualizar Software" -ForegroundColor Red
+        }
+         "5" {
+            
             Write-Host "Saindo... Até logo!" -ForegroundColor Red
         }
         default {
             Write-Host "Opção inválida. Tente novamente." -ForegroundColor Red
         }
     }
+    Pause
 
 } while ($option -ne "4")
